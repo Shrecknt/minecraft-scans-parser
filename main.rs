@@ -16,10 +16,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let print = false;
 
+    println!("Deleting old file...");
     let _ = fs::remove_file(filename);
 
     //let buf = get_file_as_byte_vec("ips.bin");
 
+    println!("Requesting binary from github...");
     let buf = reqwest::get(ips_url)
         .await?
         .bytes()
@@ -27,6 +29,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut write_out = String::new();
 
+    println!("Parsing binary data...");
+    let mut count = 0;
     for chunk in buf.chunks(6) {
         let port = u16::from(chunk[4]) * 256 + u16::from(chunk[5]);
 
@@ -39,8 +43,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let append = format!("{}.{}.{}.{}:{}\n", chunk[0], chunk[1], chunk[2], chunk[3], port);
         write_out.push_str(&append);
+        count += 1;
     }
+    println!("Found {} entries...", count);
 
+    println!("Writing file...");
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -50,6 +57,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if let Err(e) = writeln!(file, "{}", write_out) {
         eprintln!("Couldn't write to file: {}", e);
+    } else {
+        println!("Done!");
     }
 
     Ok(())
